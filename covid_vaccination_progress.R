@@ -8,8 +8,8 @@ library(caTools)
 
 #exploring data
 
-# vaccine_data <- read.csv("C:/Users/prana/Desktop/R Mini project/country_vaccinations.csv")
-vaccine_data <- read.csv("C:/Users/user/Desktop/Prem/College/Sem 8/R/project/Covid-Vaccination-Progress/country_vaccinations.csv")
+vaccine_data <- read.csv("C:/Users/prana/Desktop/R Mini project/country_vaccinations.csv")
+#vaccine_data <- read.csv("C:/Users/user/Desktop/Prem/College/Sem 8/R/project/Covid-Vaccination-Progress/country_vaccinations.csv")
 
 #drop unnecessary columns - iso code, source name and source website
 vaccine_data = subset(vaccine_data, select = -c(iso_code, source_name, source_website))
@@ -66,14 +66,6 @@ unique(vaccine_data$vaccines)
 
 
 # Statistics of Dataset
-# Prem: Are the below 5 lines of code necessary? Are we learning anything from it?
-mean(vaccine_data$total_vaccinations)
-mean(vaccine_data$people_fully_vaccinated)
-
-median(vaccine_data$total_vaccinations)
-quantile(vaccine_data$total_vaccinations)
-var(vaccine_data$total_vaccinations)
-
 # Prem: I think we can just do the following 1 line
 summary(vaccine_data$total_vaccinations)
 
@@ -85,28 +77,13 @@ vaccine_data%>%distinct(country)%>%count()
 
 
 # Exploratory analysis 
-less_than_million <- vaccine_data[vaccine_data$daily_vaccinations_per_million < 1, ]
-less_than_million  #show entries of countries with daily vaccinations less than 1 million
 
-# Number of countries with daily vaccinations less than 1 million
-count(less_than_million)
+sputnik_count <- vaccine_data %>% filter(vaccines %in% c("Sputnik V"))
+sputnik_count%>%distinct(country) #shows names of countries with Sputnik vaccines
 
-# Adding category of grade column  - is it to be done? can it be done? 
-# Prem: what grade do you want to add? and purpose of it?
+sputnik_count%>%distinct(country)%>%count() #count of those countries
 
 #Data visualization
-
-vaccine_names = subset(vaccine_data, select = c(vaccines))
-
-vaccine_names
-
-pfizer_moderna_count = vaccine_names %>% filter(
-  vaccines %in% c("Moderna, Oxford/AstraZeneca", "Pfizer/BioNTech" )
-)
-
-pfizer_moderna_count
-
-# Prem: Is this what you wanted?
 
 dataplot <- vaccine_data %>% filter(
   vaccines %in% c("Moderna, Oxford/AstraZeneca", "Pfizer/BioNTech" )
@@ -116,7 +93,7 @@ dataplot <- vaccine_data %>% filter(
          ",", 
          direction="long")
 print(dataplot)
-ggplot(dataplot, aes(x=country, fill = country)) + geom_bar()
+ggplot(dataplot, aes(y=country, fill = country)) + geom_bar()
 
 
 # Prem 
@@ -152,6 +129,19 @@ ggplot(dataplot,
   ggtitle('Share of Vaccine Companies') +
   theme_void()
 
+#Plotting the count of Pfizer wrt countries
+
+pfizer_data <- vaccine_data %>%
+  filter(vaccines %in% c("Pfizer/BioNTech" ))%>%
+  select("country")%>%
+  group_by(country)
+
+ggplot(pfizer_data, aes(x = country, fill = country)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90)) + 
+  ggtitle('Count of Pfizer Vaccine')
+
+#Plotting the Global Vaccination Trends wrt monthly vaccination count
 
 vaccine_data$date = as.Date(vaccine_data$date)
 
@@ -168,6 +158,54 @@ labs(x="Date",y ="Vaccination count", title  = "Global Vaccination Trends", col=
 theme_bw() +
 scale_color_manual(values = c('1st Dosage' = '#3366CC','2nd Dossage' = '#FF9933'))
 
+
+#Plotting the Indian Vaccination Trends wrt monthly vaccination count
+
+indiaplot <- vaccine_data %>%
+  filter(country %in% c("India" ))%>%
+  select("date","people_vaccinated","people_fully_vaccinated")%>%
+  group_by(date) %>%
+  summarise (people_vaccinated=sum(people_vaccinated), people_fully_vaccinated=sum(people_fully_vaccinated))
+
+ggplot(indiaplot) +
+  geom_line(aes(x=date, y=people_vaccinated, col="1st Dosage"), size = 1) +
+  geom_line(aes(x=date, y=people_fully_vaccinated, col="2nd Dossage"), size=1) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(x="Date",y ="Vaccination count", title  = "India- Vaccination Trends", col=element_blank()) +
+  theme_bw() +
+  scale_color_manual(values = c('1st Dosage' = '#3366CC','2nd Dossage' = '#FF9933'))
+
+#plotting total count of vaccinations in India monthwise
+# pranali : check this once na, seems weird. maybe i made a mistake in logic
+
+india_plot <- vaccine_data %>%
+  filter(country %in% c("India" ))%>%
+  select("date","people_fully_vaccinated")%>%
+  group_by(date) %>%
+  summarise (people_fully_vaccinated=sum(people_fully_vaccinated))
+
+ggplot(india_plot, aes(x = date, fill = date)) +
+  geom_histogram(bins=10, fill="pink",color="red") +
+  ggtitle('Count of People Fully Vaccinated in India')+
+  labs(x="Months",y ="Vaccination count in millions", col=element_blank())
+
+#pranali - here i have gotten the vaccines per country, we can try making
+# a stacked bar graph for vaccines used in each country
+
+vaccine_plot <- vaccine_data %>%
+  select ("country","vaccines")%>%
+  group_by(country)%>%
+  cSplit("vaccines", 
+         ",", 
+         direction="long")%>%
+  distinct()  
+
+vaccine_plot
+  
+#pranali : this is what is coming, see if something can be done, its a little messy
+# cause all countries obviously 
+ggplot(data = vaccine_plot, aes(x = country, y = vaccines, fill = vaccines)) + 
+  geom_bar(stat='identity') + coord_flip()
 
 # PENDING 
 # TODO - make the model on just India data
